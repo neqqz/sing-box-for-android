@@ -355,7 +355,14 @@ class BoxService(private val service: Service, private val platformInterface: Pl
     @OptIn(DelicateCoroutinesApi::class)
     @Suppress("SameReturnValue")
     internal fun onStartCommand(): Int {
-        if (status.value != Status.Stopped) return Service.START_NOT_STICKY
+        // Android kills the app if startForeground() isn't called within ~10s of startForegroundService(),
+        // so call it first, on every path (including the early return below and startup failures).
+        val alreadyRunning = status.value != Status.Stopped
+        notification.show(
+            lastProfileName,
+            if (alreadyRunning) R.string.status_started else R.string.status_starting,
+        )
+        if (alreadyRunning) return Service.START_NOT_STICKY
         status.value = Status.Starting
 
         if (!receiverRegistered) {
